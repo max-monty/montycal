@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cal-bg: #0f172a;
+  --color-cal-surface: #1e293b;
+  --color-cal-surface-hover: #334155;
+  --color-cal-border: #334155;
+  --color-cal-border-light: #475569;
+  --color-cal-text: #f8fafc;
+  --color-cal-text-muted: #94a3b8;
+  --color-cal-text-dim: #64748b;
+  --color-cal-accent: #3b82f6;
+  --color-cal-today: #f59e0b;
+  --color-cal-weekend: rgba(99, 102, 241, 0.08);
+}
+
+/* Light mode overrides */
+html.light {
+  --color-cal-bg: #f8fafc;
+  --color-cal-surface: #ffffff;
+  --color-cal-surface-hover: #f1f5f9;
+  --color-cal-border: #e2e8f0;
+  --color-cal-border-light: #cbd5e1;
+  --color-cal-text: #0f172a;
+  --color-cal-text-muted: #64748b;
+  --color-cal-text-dim: #94a3b8;
+  --color-cal-accent: #2563eb;
+  --color-cal-today: #d97706;
+  --color-cal-weekend: rgba(99, 102, 241, 0.06);
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background-color: var(--color-cal-bg);
+  color: var(--color-cal-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cal-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-cal-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cal-border-light);
+}
