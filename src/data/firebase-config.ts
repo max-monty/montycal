@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  browserPopupRedirectResolver,
   type User,
 } from 'firebase/auth';
 
@@ -34,7 +35,7 @@ const googleProvider = new GoogleAuthProvider();
 
 /** Sign in with Google popup */
 export async function googleSignIn(): Promise<User> {
-  const result = await signInWithPopup(auth, googleProvider);
+  const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
   return result.user;
 }
 
