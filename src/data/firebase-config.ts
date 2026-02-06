@@ -1,6 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import {
+  initializeAuth,
+  browserLocalPersistence,
+  indexedDBLocalPersistence,
+  signInAnonymously,
+  onAuthStateChanged,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,14 +19,18 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-export const auth = getAuth(app);
 
-// Sign in anonymously so each browser gets a unique user ID for data isolation
+// Explicitly set persistence so the anonymous user survives tab closes
+export const auth = initializeAuth(app, {
+  persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+});
+
 let authReady: Promise<string>;
 
 export function getAuthReady(): Promise<string> {
   if (!authReady) {
     authReady = new Promise((resolve, reject) => {
+      // onAuthStateChanged waits for persistence to load before first callback
       const unsub = onAuthStateChanged(auth, (user) => {
         unsub();
         if (user) {
