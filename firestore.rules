@@ -20,7 +20,10 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         resource.data.collaboratorEmail == request.auth.token.email
       );
-      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow delete: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.collaboratorEmail == request.auth.token.email
+      );
     }
 
     // Helper: check if requester is a collaborator for the given owner
