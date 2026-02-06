@@ -85,14 +85,38 @@ export class LocalStorageRepository implements DataRepository {
 
 let repository: DataRepository | null = null;
 
-export async function initRepository(): Promise<DataRepository> {
-  if (!repository) {
-    if (import.meta.env.VITE_STORAGE_BACKEND === 'firebase') {
-      const { FirebaseRepository } = await import('./firebase-repository');
-      repository = new FirebaseRepository();
-    } else {
-      repository = new LocalStorageRepository();
-    }
+/**
+ * Initialize (or reinitialize) the repository based on the given backend.
+ * 'localStorage' = demo mode, 'firebase' = signed-in user.
+ */
+export async function initRepository(backend?: 'localStorage' | 'firebase'): Promise<DataRepository> {
+  const which = backend ?? (import.meta.env.VITE_STORAGE_BACKEND === 'firebase' ? 'firebase' : 'localStorage');
+
+  if (which === 'firebase') {
+    const { FirebaseRepository } = await import('./firebase-repository');
+    repository = new FirebaseRepository();
+  } else {
+    repository = new LocalStorageRepository();
+  }
+
+  return repository;
+}
+
+/**
+ * Switch repository at runtime (e.g., after sign-in/sign-out).
+ * Optionally pass a uid for Firebase to scope to a specific user's data.
+ */
+export async function switchRepository(
+  backend: 'localStorage' | 'firebase',
+  uid?: string,
+): Promise<DataRepository> {
+  if (backend === 'firebase') {
+    const { FirebaseRepository } = await import('./firebase-repository');
+    const repo = new FirebaseRepository();
+    if (uid) repo.setActiveUid(uid);
+    repository = repo;
+  } else {
+    repository = new LocalStorageRepository();
   }
   return repository;
 }

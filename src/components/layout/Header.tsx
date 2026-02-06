@@ -1,5 +1,7 @@
+import { useState, useRef, useEffect } from 'react';
 import { useViewStore } from '../../stores/view-store';
 import { useUIStore } from '../../stores/ui-store';
+import { useAuthStore } from '../../stores/auth-store';
 import type { ViewMode } from '../../types';
 
 const VIEW_OPTIONS: { mode: ViewMode; label: string }[] = [
@@ -32,11 +34,248 @@ function MoonIcon() {
   );
 }
 
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  );
+}
+
+function AuthDropdown() {
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuthStore();
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<'pick' | 'signin' | 'signup'>('pick');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setMode('pick');
+        setError('');
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setError('');
+    setBusy(true);
+    try {
+      if (mode === 'signup') {
+        await signUpWithEmail(email.trim(), password);
+      } else {
+        await signInWithEmail(email.trim(), password);
+      }
+      setOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Authentication failed';
+      // Clean up Firebase error messages
+      setError(msg.replace(/Firebase: /, '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Authentication failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="px-3 py-1.5 text-xs font-medium bg-cal-accent text-white rounded-lg hover:bg-cal-accent/80 transition-colors"
+      >
+        Sign in
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-cal-surface border border-cal-border rounded-xl shadow-2xl z-50 overflow-hidden">
+          {mode === 'pick' && (
+            <div className="p-4 space-y-3">
+              <p className="text-sm font-semibold text-center">Sign in to Monty Cal</p>
+              <button
+                onClick={async () => {
+                  try { await signInWithGoogle(); setOpen(false); } catch { /* popup closed */ }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 rounded-lg hover:bg-gray-100 border border-gray-300 transition-colors"
+              >
+                <GoogleIcon />
+                Continue with Google
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-cal-border" />
+                <span className="text-xs text-cal-text-muted">or</span>
+                <div className="flex-1 h-px bg-cal-border" />
+              </div>
+              <button
+                onClick={() => setMode('signin')}
+                className="w-full px-3 py-2 text-sm font-medium border border-cal-border rounded-lg hover:bg-cal-surface-hover transition-colors"
+              >
+                Sign in with email
+              </button>
+              <p className="text-xs text-cal-text-muted text-center">
+                No account?{' '}
+                <button onClick={() => setMode('signup')} className="text-cal-accent hover:underline">
+                  Sign up
+                </button>
+              </p>
+            </div>
+          )}
+
+          {(mode === 'signin' || mode === 'signup') && (
+            <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setMode('pick'); setError(''); }}
+                  className="text-cal-text-muted hover:text-cal-text text-sm"
+                >
+                  ‹
+                </button>
+                <p className="text-sm font-semibold">
+                  {mode === 'signup' ? 'Create account' : 'Sign in with email'}
+                </p>
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cal-accent"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                minLength={6}
+                className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cal-accent"
+              />
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full px-3 py-2 text-sm font-medium bg-cal-accent text-white rounded-lg hover:bg-cal-accent/80 disabled:opacity-50 transition-colors"
+              >
+                {busy ? '...' : mode === 'signup' ? 'Create Account' : 'Sign In'}
+              </button>
+              <p className="text-xs text-cal-text-muted text-center">
+                {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+                <button
+                  type="button"
+                  onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); }}
+                  className="text-cal-accent hover:underline"
+                >
+                  {mode === 'signup' ? 'Sign in' : 'Sign up'}
+                </button>
+              </p>
+            </form>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserMenu() {
+  const { user, signOut, sharedCalendars, activeCalendarUid, setActiveCalendar } = useAuthStore();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  if (!user) return null;
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-8 h-8 rounded-full overflow-hidden border-2 border-cal-border hover:border-cal-accent transition-colors"
+      >
+        {user.photoURL ? (
+          <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="w-full h-full bg-cal-accent flex items-center justify-center text-white text-xs font-bold">
+            {(user.displayName || user.email || '?')[0].toUpperCase()}
+          </div>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-64 bg-cal-surface border border-cal-border rounded-xl shadow-2xl z-50 overflow-hidden">
+          {/* User info */}
+          <div className="px-4 py-3 border-b border-cal-border">
+            <p className="text-sm font-semibold truncate">{user.displayName}</p>
+            <p className="text-xs text-cal-text-muted truncate">{user.email}</p>
+          </div>
+
+          {/* Calendar switcher */}
+          <div className="px-2 py-2 border-b border-cal-border">
+            <button
+              onClick={() => { setActiveCalendar(null); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
+                !activeCalendarUid
+                  ? 'bg-cal-accent/10 text-cal-accent font-medium'
+                  : 'text-cal-text hover:bg-cal-surface-hover'
+              }`}
+            >
+              My Calendar
+            </button>
+            {sharedCalendars.map((cal) => (
+              <button
+                key={cal.shareId}
+                onClick={() => { setActiveCalendar(cal.ownerUid, cal.ownerName || cal.ownerEmail); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
+                  activeCalendarUid === cal.ownerUid
+                    ? 'bg-cal-accent/10 text-cal-accent font-medium'
+                    : 'text-cal-text hover:bg-cal-surface-hover'
+                }`}
+              >
+                {cal.ownerName || cal.ownerEmail}
+              </button>
+            ))}
+          </div>
+
+          {/* Sign out */}
+          <div className="px-2 py-2">
+            <button
+              onClick={() => { signOut(); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Header() {
   const { focusYear, viewMode, setViewMode, zoomValue, setZoomValue, nextYear, prevYear } = useViewStore();
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const { user, loading, activeCalendarName } = useAuthStore();
 
   return (
     <header className="flex items-center gap-3 px-4 py-2.5 bg-cal-surface border-b border-cal-border shrink-0">
@@ -54,6 +293,13 @@ export function Header() {
       <h1 className="text-lg font-bold tracking-tight">
         <span className="text-cal-accent">Monty</span> Cal
       </h1>
+
+      {/* Active calendar indicator */}
+      {activeCalendarName && (
+        <span className="hidden sm:inline text-xs bg-cal-accent/15 text-cal-accent px-2 py-0.5 rounded-full font-medium">
+          {activeCalendarName}'s calendar
+        </span>
+      )}
 
       {/* Year nav (year mode only) */}
       {viewMode === 'year' && (
@@ -139,6 +385,10 @@ export function Header() {
       >
         Today
       </button>
+
+      {/* Auth section */}
+      {!loading && !user && <AuthDropdown />}
+      {!loading && user && <UserMenu />}
     </header>
   );
 }

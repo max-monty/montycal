@@ -49,3 +49,27 @@ export interface MultiDaySegment {
   color: string;
   title: string;
 }
+
+export interface Share {
+  id: string;            // deterministic: `${ownerUid}_${collaboratorUid}`
+  ownerUid: string;
+  ownerEmail: string;
+  ownerName: string;
+  collaboratorEmail: string;
+  collaboratorUid: string | null;
+  createdAt: number;
+}
+
+export interface SharedCalendar {
+  ownerUid: string;
+  ownerEmail: string;
+  ownerName: string;
+  shareId: string;
+}
+
+export interface AuthUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL: string;
+}

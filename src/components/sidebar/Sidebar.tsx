@@ -1,14 +1,139 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '../../stores/ui-store';
 import { useCalendarStore } from '../../stores/calendar-store';
+import { useAuthStore } from '../../stores/auth-store';
 import { CategoryManager } from './CategoryManager';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+
+function SharingSection() {
+  const { user, sharedCalendars, setActiveCalendar, loadSharedCalendars } = useAuthStore();
+  const [shareEmail, setShareEmail] = useState('');
+  const [myShares, setMyShares] = useState<{ id: string; collaboratorEmail: string }[]>([]);
+  const [sharesLoaded, setSharesLoaded] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!user) return null;
+
+  const loadMyShares = async () => {
+    try {
+      const { FirebaseRepository } = await import('../../data/firebase-repository');
+      const repo = new FirebaseRepository();
+      const shares = await repo.getMyShares();
+      setMyShares(shares.map((s) => ({ id: s.id, collaboratorEmail: s.collaboratorEmail })));
+      setSharesLoaded(true);
+    } catch {
+      setSharesLoaded(true);
+    }
+  };
+
+  if (!sharesLoaded) {
+    loadMyShares();
+  }
+
+  const handleShare = async () => {
+    if (!shareEmail.trim()) return;
+    setError('');
+    setSharing(true);
+    try {
+      const { FirebaseRepository } = await import('../../data/firebase-repository');
+      const repo = new FirebaseRepository();
+      await repo.shareCalendar(shareEmail.trim());
+      setShareEmail('');
+      setSharesLoaded(false); // trigger reload
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to share');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleRemoveShare = async (shareId: string) => {
+    try {
+      const { FirebaseRepository } = await import('../../data/firebase-repository');
+      const repo = new FirebaseRepository();
+      await repo.removeShare(shareId);
+      setSharesLoaded(false);
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-cal-text-muted uppercase tracking-wider">Sharing</h3>
+
+      {/* Share with someone */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={shareEmail}
+            onChange={(e) => setShareEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleShare()}
+            placeholder="Email to share with..."
+            className="flex-1 bg-cal-bg border border-cal-border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-cal-accent"
+          />
+          <button
+            onClick={handleShare}
+            disabled={sharing || !shareEmail.trim()}
+            className="px-3 py-1.5 text-xs font-medium bg-cal-accent text-white rounded-lg hover:bg-cal-accent/80 disabled:opacity-50 transition-colors"
+          >
+            Share
+          </button>
+        </div>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </div>
+
+      {/* People I've shared with */}
+      {myShares.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs text-cal-text-muted">Shared with:</p>
+          {myShares.map((share) => (
+            <div key={share.id} className="flex items-center justify-between gap-2 py-1">
+              <span className="text-xs truncate">{share.collaboratorEmail}</span>
+              <button
+                onClick={() => handleRemoveShare(share.id)}
+                className="text-xs text-red-400 hover:text-red-300 shrink-0"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Calendars shared with me */}
+      {sharedCalendars.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs text-cal-text-muted">Shared with me:</p>
+          {sharedCalendars.map((cal) => (
+            <button
+              key={cal.shareId}
+              onClick={() => setActiveCalendar(cal.ownerUid, cal.ownerName || cal.ownerEmail)}
+              className="w-full text-left text-xs py-1.5 px-2 rounded-lg hover:bg-cal-surface-hover transition-colors"
+            >
+              {cal.ownerName || cal.ownerEmail}
+            </button>
+          ))}
+          <button
+            onClick={() => loadSharedCalendars()}
+            className="text-xs text-cal-accent hover:underline"
+          >
+            Refresh
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const exportData = useCalendarStore((s) => s.exportData);
   const importData = useCalendarStore((s) => s.importData);
+  const user = useAuthStore((s) => s.user);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
@@ -65,6 +190,9 @@ export function Sidebar() {
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
               <CategoryManager />
 
+              {/* Sharing (only when signed in) */}
+              {user && <SharingSection />}
+
               {/* Data Management */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-cal-text-muted uppercase tracking-wider">Data</h3>
@@ -90,6 +218,14 @@ export function Sidebar() {
                   />
                 </div>
               </div>
+
+              {/* Demo mode indicator */}
+              {!user && (
+                <div className="text-xs text-cal-text-muted bg-cal-bg rounded-lg p-3">
+                  <p className="font-medium mb-1">Demo Mode</p>
+                  <p>Data is stored locally in your browser. Sign in with Google to save to the cloud and share.</p>
+                </div>
+              )}
             </div>
           </motion.aside>
         </>

@@ -4,8 +4,13 @@ import {
   initializeAuth,
   browserLocalPersistence,
   indexedDBLocalPersistence,
-  signInAnonymously,
   onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  type User,
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -20,28 +25,55 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
-// Explicitly set persistence so the anonymous user survives tab closes
+// Explicitly set persistence so the user survives tab closes
 export const auth = initializeAuth(app, {
   persistence: [indexedDBLocalPersistence, browserLocalPersistence],
 });
 
-let authReady: Promise<string>;
+const googleProvider = new GoogleAuthProvider();
 
-export function getAuthReady(): Promise<string> {
+/** Sign in with Google popup */
+export async function googleSignIn(): Promise<User> {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+}
+
+/** Sign up with email + password */
+export async function emailSignUp(email: string, password: string): Promise<User> {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  return result.user;
+}
+
+/** Sign in with email + password */
+export async function emailSignIn(email: string, password: string): Promise<User> {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  return result.user;
+}
+
+/** Sign out */
+export async function firebaseSignOut(): Promise<void> {
+  await signOut(auth);
+}
+
+/**
+ * Wait for Firebase auth to resolve the initial state.
+ * Returns the current user or null (does NOT auto-create anonymous users).
+ */
+let authReady: Promise<User | null>;
+
+export function getAuthReady(): Promise<User | null> {
   if (!authReady) {
-    authReady = new Promise((resolve, reject) => {
-      // onAuthStateChanged waits for persistence to load before first callback
+    authReady = new Promise((resolve) => {
       const unsub = onAuthStateChanged(auth, (user) => {
         unsub();
-        if (user) {
-          resolve(user.uid);
-        } else {
-          signInAnonymously(auth)
-            .then((cred) => resolve(cred.user.uid))
-            .catch(reject);
-        }
+        resolve(user);
       });
     });
   }
   return authReady;
+}
+
+/** Reset the authReady promise (used after sign-in/sign-out to re-evaluate) */
+export function resetAuthReady(): void {
+  authReady = undefined as unknown as Promise<User | null>;
 }

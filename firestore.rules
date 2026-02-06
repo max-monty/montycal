@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read/write their own data, or data of calendars shared with them
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && (
+        request.auth.uid == userId ||
+        isCollaborator(userId, request.auth.uid)
+      );
+    }
+
+    // Anyone authenticated can create shares, only owner/collaborator can read/delete
+    match /shares/{shareId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.collaboratorUid == request.auth.uid ||
+        resource.data.collaboratorEmail == request.auth.token.email
+      );
+      allow update: if request.auth != null && (
+        resource.data.collaboratorEmail == request.auth.token.email
+      );
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Helper: check if requester is a collaborator for the given owner
+    // Uses deterministic doc ID: {ownerUid}_{collaboratorUid}
+    function isCollaborator(ownerUid, requesterUid) {
+      return exists(/databases/$(database)/documents/shares/$(ownerUid + '_' + requesterUid));
+    }
+  }
+}
