@@ -48,24 +48,41 @@ function GoogleIcon() {
 function AuthDropdown() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuthStore();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'pick' | 'signin' | 'signup'>('pick');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const googleBusy = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
+      if (googleBusy.current) return;
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
-        setMode('pick');
         setError('');
       }
     }
     if (open) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
+
+  const handleGoogle = async () => {
+    setError('');
+    googleBusy.current = true;
+    try {
+      await signInWithGoogle();
+      setOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (!msg.includes('popup-closed')) {
+        setError(msg.replace(/Firebase: /, '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Google sign-in failed');
+      }
+    } finally {
+      googleBusy.current = false;
+    }
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +98,6 @@ function AuthDropdown() {
       setOpen(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Authentication failed';
-      // Clean up Firebase error messages
       setError(msg.replace(/Firebase: /, '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Authentication failed');
     } finally {
       setBusy(false);
@@ -99,52 +115,28 @@ function AuthDropdown() {
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-72 bg-cal-surface border border-cal-border rounded-xl shadow-2xl z-50 overflow-hidden">
-          {mode === 'pick' && (
-            <div className="p-4 space-y-3">
-              <p className="text-sm font-semibold text-center">Sign in to Monty Cal</p>
-              <button
-                onClick={async () => {
-                  try { await signInWithGoogle(); setOpen(false); } catch { /* popup closed */ }
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 rounded-lg hover:bg-gray-100 border border-gray-300 transition-colors"
-              >
-                <GoogleIcon />
-                Continue with Google
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-cal-border" />
-                <span className="text-xs text-cal-text-muted">or</span>
-                <div className="flex-1 h-px bg-cal-border" />
-              </div>
-              <button
-                onClick={() => setMode('signin')}
-                className="w-full px-3 py-2 text-sm font-medium border border-cal-border rounded-lg hover:bg-cal-surface-hover transition-colors"
-              >
-                Sign in with email
-              </button>
-              <p className="text-xs text-cal-text-muted text-center">
-                No account?{' '}
-                <button onClick={() => setMode('signup')} className="text-cal-accent hover:underline">
-                  Sign up
-                </button>
-              </p>
-            </div>
-          )}
+          <div className="p-4 space-y-3">
+            <p className="text-sm font-semibold text-center">
+              {mode === 'signup' ? 'Create your account' : 'Sign in to Monty Cal'}
+            </p>
 
-          {(mode === 'signin' || mode === 'signup') && (
-            <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setMode('pick'); setError(''); }}
-                  className="text-cal-text-muted hover:text-cal-text text-sm"
-                >
-                  ‹
-                </button>
-                <p className="text-sm font-semibold">
-                  {mode === 'signup' ? 'Create account' : 'Sign in with email'}
-                </p>
-              </div>
+            {/* Google — always visible */}
+            <button
+              onClick={handleGoogle}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 rounded-lg hover:bg-gray-100 border border-gray-300 transition-colors"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-cal-border" />
+              <span className="text-xs text-cal-text-muted">or</span>
+              <div className="flex-1 h-px bg-cal-border" />
+            </div>
+
+            {/* Email / password form */}
+            <form onSubmit={handleEmailSubmit} className="space-y-3">
               <input
                 type="email"
                 value={email}
@@ -170,18 +162,18 @@ function AuthDropdown() {
               >
                 {busy ? '...' : mode === 'signup' ? 'Create Account' : 'Sign In'}
               </button>
-              <p className="text-xs text-cal-text-muted text-center">
-                {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
-                <button
-                  type="button"
-                  onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); }}
-                  className="text-cal-accent hover:underline"
-                >
-                  {mode === 'signup' ? 'Sign in' : 'Sign up'}
-                </button>
-              </p>
             </form>
-          )}
+
+            <p className="text-xs text-cal-text-muted text-center">
+              {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); }}
+                className="text-cal-accent hover:underline"
+              >
+                {mode === 'signup' ? 'Sign in' : 'Sign up'}
+              </button>
+            </p>
+          </div>
         </div>
       )}
     </div>
