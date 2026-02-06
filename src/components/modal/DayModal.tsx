@@ -32,6 +32,10 @@ export function DayModal() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>();
   const [notes, setNotes] = useState('');
+  const [daySettingsOpen, setDaySettingsOpen] = useState(false);
+
+  // Auto-open day settings if any are already set
+  const hasDaySettings = !!(dayData?.backgroundColor || dayData?.categoryId || dayData?.notes);
 
   // If opened from clicking an event on the grid, auto-open edit form
   useEffect(() => {
@@ -49,6 +53,11 @@ export function DayModal() {
       setEditingEvent(undefined);
     }
   }, [selectedDate, dayData?.notes, editingEventId]);
+
+  // Reset day settings open state when date changes; auto-open if settings exist
+  useEffect(() => {
+    setDaySettingsOpen(false);
+  }, [selectedDate]);
 
   const handleNotesBlur = useCallback(() => {
     if (selectedDate) {
@@ -70,6 +79,7 @@ export function DayModal() {
 
   const dateObj = parseISO(selectedDate);
   const formattedDate = format(dateObj, 'EEEE, MMMM d, yyyy');
+  const showDaySettings = daySettingsOpen || hasDaySettings;
 
   return createPortal(
     <AnimatePresence>
@@ -107,58 +117,7 @@ export function DayModal() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {/* Day color */}
-              <div>
-                <label className="text-xs font-medium text-cal-text-muted block mb-1.5">Day Color</label>
-                <ColorPicker
-                  value={dayData?.backgroundColor}
-                  onChange={(c) => setDayBackground(selectedDate, c)}
-                />
-              </div>
-
-              {/* Day category */}
-              <div>
-                <label className="text-xs font-medium text-cal-text-muted block mb-1.5">Day Category</label>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setDayCategory(selectedDate, undefined)}
-                    className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                      !dayData?.categoryId
-                        ? 'border-cal-accent text-cal-accent'
-                        : 'border-cal-border text-cal-text-muted'
-                    }`}
-                  >
-                    None
-                  </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setDayCategory(selectedDate, cat.id)}
-                      className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                        dayData?.categoryId === cat.id ? 'border-current' : 'border-transparent'
-                      }`}
-                      style={{ color: cat.color, backgroundColor: cat.color + '20' }}
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="text-xs font-medium text-cal-text-muted block mb-1.5">Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  onBlur={handleNotesBlur}
-                  placeholder="Day notes..."
-                  rows={2}
-                  className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm text-cal-text placeholder:text-cal-text-dim focus:outline-none focus:border-cal-accent resize-none"
-                />
-              </div>
-
-              {/* Events */}
+              {/* Events — front and center */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-cal-text-muted">Events</label>
@@ -180,6 +139,87 @@ export function DayModal() {
                   />
                 ) : (
                   <EventList events={events} onEdit={handleEdit} />
+                )}
+              </div>
+
+              {/* Day Settings — collapsible at bottom */}
+              <div className="border-t border-cal-border pt-3">
+                <button
+                  onClick={() => setDaySettingsOpen(!showDaySettings)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-cal-text-muted hover:text-cal-text transition-colors"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`transition-transform ${showDaySettings ? 'rotate-90' : ''}`}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  Day settings
+                  {hasDaySettings && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-cal-accent" />
+                  )}
+                </button>
+
+                {showDaySettings && (
+                  <div className="mt-3 space-y-3">
+                    {/* Day color */}
+                    <div>
+                      <label className="text-xs font-medium text-cal-text-muted block mb-1.5">Color</label>
+                      <ColorPicker
+                        value={dayData?.backgroundColor}
+                        onChange={(c) => setDayBackground(selectedDate, c)}
+                      />
+                    </div>
+
+                    {/* Day category */}
+                    <div>
+                      <label className="text-xs font-medium text-cal-text-muted block mb-1.5">Category</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          onClick={() => setDayCategory(selectedDate, undefined)}
+                          className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
+                            !dayData?.categoryId
+                              ? 'border-cal-accent text-cal-accent'
+                              : 'border-cal-border text-cal-text-muted'
+                          }`}
+                        >
+                          None
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setDayCategory(selectedDate, cat.id)}
+                            className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
+                              dayData?.categoryId === cat.id ? 'border-current' : 'border-transparent'
+                            }`}
+                            style={{ color: cat.color, backgroundColor: cat.color + '20' }}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="text-xs font-medium text-cal-text-muted block mb-1.5">Notes</label>
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        onBlur={handleNotesBlur}
+                        placeholder="Day notes..."
+                        rows={2}
+                        className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm text-cal-text placeholder:text-cal-text-dim focus:outline-none focus:border-cal-accent resize-none"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

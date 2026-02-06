@@ -26,7 +26,7 @@ export function EventList({ events, onEdit }: EventListProps) {
         return (
           <div
             key={event.id}
-            className="flex items-start gap-2 p-2 rounded-lg hover:bg-cal-surface transition-colors group"
+            className="flex items-start gap-2 p-2 rounded-lg hover:bg-cal-surface transition-colors"
             style={{ borderLeft: `3px solid ${color}` }}
           >
             <div className="flex-1 min-w-0">
@@ -56,18 +56,27 @@ export function EventList({ events, onEdit }: EventListProps) {
                 </p>
               )}
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            <div className="flex gap-0.5 shrink-0">
               <button
                 onClick={() => onEdit(event)}
-                className="text-xs text-cal-text-muted hover:text-cal-text px-1.5 py-0.5 rounded hover:bg-cal-surface-hover"
+                className="w-7 h-7 flex items-center justify-center rounded-md text-cal-text-dim hover:text-cal-text hover:bg-cal-surface-hover transition-colors"
+                title="Edit"
               >
-                Edit
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  <path d="m15 5 4 4" />
+                </svg>
               </button>
               <button
                 onClick={() => deleteEvent(event.id)}
-                className="text-xs text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded hover:bg-red-500/10"
+                className="w-7 h-7 flex items-center justify-center rounded-md text-cal-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Delete"
               >
-                Del
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                </svg>
               </button>
             </div>
           </div>

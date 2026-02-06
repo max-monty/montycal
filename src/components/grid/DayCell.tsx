@@ -68,16 +68,22 @@ export const DayCell = memo(function DayCell({ date, isValid, zoomTier }: DayCel
     return start;
   };
 
+  const cellStyle = displayColor
+    ? { backgroundColor: displayColor + '20' }
+    : today
+      ? { backgroundColor: 'rgba(245, 158, 11, 0.08)' }
+      : undefined;
+
   return (
     <div
       className={`
         relative border-r border-b border-cal-border/50 cursor-pointer transition-colors duration-100
-        ${weekend ? 'bg-cal-weekend' : ''}
+        ${weekend && !today ? 'bg-cal-weekend' : ''}
         ${isSelected ? 'ring-2 ring-cal-accent ring-inset z-10' : ''}
         ${today ? 'ring-2 ring-cal-today ring-inset z-10' : ''}
         hover:bg-cal-surface-hover
       `}
-      style={displayColor ? { backgroundColor: displayColor + '20' } : undefined}
+      style={cellStyle}
       onClick={handleCellClick}
     >
       {/* Low zoom: color swatch + event count badge */}

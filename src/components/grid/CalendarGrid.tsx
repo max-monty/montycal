@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useViewStore } from '../../stores/view-store';
 import { useCalendarStore } from '../../stores/calendar-store';
 import { useCategoryStore } from '../../stores/category-store';
@@ -9,6 +9,9 @@ import { DayHeader } from './DayHeader';
 import { MonthRow } from './MonthRow';
 import { YearSeparator } from './YearSeparator';
 
+const DAY_HEADER_HEIGHT = 32; // h-8
+const MIN_CELL_H = 28;
+
 export function CalendarGrid() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scale } = useZoom(containerRef);
@@ -16,6 +19,8 @@ export function CalendarGrid() {
   const { months, topSentinelRef, bottomSentinelRef, loadMoreTop, loadMoreBottom } = useInfiniteScroll(focusYear);
   const events = useCalendarStore((s) => s.events);
   const categories = useCategoryStore((s) => s.categories);
+
+  const [autoFillCellH, setAutoFillCellH] = useState<number | null>(null);
 
   const yearMonths = useMemo(() => {
     if (viewMode === 'year') {
@@ -30,6 +35,34 @@ export function CalendarGrid() {
     }
     return months;
   }, [viewMode, focusYear, months]);
+
+  // Auto-fill: calculate cell height so 12 rows fill the container
+  useEffect(() => {
+    if (viewMode !== 'year' && viewMode !== 'rolling12') {
+      setAutoFillCellH(null);
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const containerH = el.clientHeight;
+      // Account for day header at low zoom
+      const headerH = zoomTier === 'low' ? DAY_HEADER_HEIGHT : 0;
+      const available = (containerH / scale) - headerH;
+      const perRow = Math.floor(available / 12);
+      if (perRow > MIN_CELL_H) {
+        setAutoFillCellH(perRow);
+      } else {
+        setAutoFillCellH(null);
+      }
+    };
+
+    compute();
+    const observer = new ResizeObserver(compute);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [viewMode, scale, zoomTier]);
 
   // Collect all unique years from visible months for multi-day event lookup
   const visibleYears = useMemo(() => {
@@ -63,6 +96,11 @@ export function CalendarGrid() {
     return result;
   }, [yearMonths, viewMode]);
 
+  // Determine cell height: use auto-fill if available, otherwise fall back to tier defaults
+  const cellH = autoFillCellH
+    ? `${autoFillCellH}px`
+    : zoomTier === 'low' ? '28px' : zoomTier === 'medium' ? '48px' : '80px';
+
   return (
     <div
       ref={containerRef}
@@ -70,7 +108,7 @@ export function CalendarGrid() {
       style={{
         ['--label-w' as string]: '60px',
         ['--cell-w' as string]: '80px',
-        ['--cell-h' as string]: zoomTier === 'low' ? '28px' : zoomTier === 'medium' ? '48px' : '80px',
+        ['--cell-h' as string]: cellH,
       }}
     >
       <div style={{ zoom: scale }}>

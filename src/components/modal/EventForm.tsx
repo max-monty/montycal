@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import type { CalendarEvent } from '../../types';
 import { useCalendarStore } from '../../stores/calendar-store';
 import { useCategoryStore } from '../../stores/category-store';
-import { ColorPicker } from '../ui/ColorPicker';
 
 interface EventFormProps {
   dateKey: string;
@@ -16,12 +15,15 @@ export function EventForm({ dateKey, editingEvent, onDone }: EventFormProps) {
   const [startTime, setStartTime] = useState(editingEvent?.startTime || editingEvent?.time || '');
   const [endTime, setEndTime] = useState(editingEvent?.endTime || '');
   const [categoryId, setCategoryId] = useState(editingEvent?.categoryId || '');
-  const [color, setColor] = useState(editingEvent?.color);
   const [endDate, setEndDate] = useState(editingEvent?.endDate || '');
+  const [showMore, setShowMore] = useState(false);
 
   const addEvent = useCalendarStore((s) => s.addEvent);
   const updateEvent = useCalendarStore((s) => s.updateEvent);
   const categories = useCategoryStore((s) => s.categories);
+
+  // Auto-expand "More" if editing an event that has end date or description
+  const hasMoreFields = !!(editingEvent?.endDate || editingEvent?.description);
 
   useEffect(() => {
     if (editingEvent) {
@@ -30,8 +32,8 @@ export function EventForm({ dateKey, editingEvent, onDone }: EventFormProps) {
       setStartTime(editingEvent.startTime || editingEvent.time || '');
       setEndTime(editingEvent.endTime || '');
       setCategoryId(editingEvent.categoryId || '');
-      setColor(editingEvent.color);
       setEndDate(editingEvent.endDate || '');
+      setShowMore(!!(editingEvent.endDate || editingEvent.description));
     }
   }, [editingEvent]);
 
@@ -46,7 +48,7 @@ export function EventForm({ dateKey, editingEvent, onDone }: EventFormProps) {
       endTime: endTime || undefined,
       time: startTime || undefined, // keep legacy field in sync
       categoryId: categoryId || undefined,
-      color,
+      color: undefined,
       startDate: editingEvent?.startDate || dateKey,
       endDate: endDate || undefined,
     };
@@ -61,94 +63,102 @@ export function EventForm({ dateKey, editingEvent, onDone }: EventFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div>
+    <form onSubmit={handleSubmit} className="space-y-2.5">
+      {/* Title + Time on same row */}
+      <div className="flex gap-2">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Event title..."
-          className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm text-cal-text placeholder:text-cal-text-dim focus:outline-none focus:border-cal-accent"
+          className="flex-1 min-w-0 bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm text-cal-text placeholder:text-cal-text-dim focus:outline-none focus:border-cal-accent"
           autoFocus
+        />
+        <input
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className="w-[110px] bg-cal-bg border border-cal-border rounded-lg px-2 py-2 text-sm text-cal-text focus:outline-none focus:border-cal-accent"
         />
       </div>
 
-      {/* Time row */}
-      <div>
-        <label className="text-xs text-cal-text-muted block mb-1">Time</label>
-        <div className="flex gap-2 items-center">
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="flex-1 bg-cal-bg border border-cal-border rounded-lg px-3 py-1.5 text-sm text-cal-text focus:outline-none focus:border-cal-accent"
-          />
+      {/* End time */}
+      {startTime && (
+        <div className="flex items-center gap-2 pl-1">
           <span className="text-cal-text-dim text-xs">to</span>
           <input
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="flex-1 bg-cal-bg border border-cal-border rounded-lg px-3 py-1.5 text-sm text-cal-text focus:outline-none focus:border-cal-accent"
+            className="w-[110px] bg-cal-bg border border-cal-border rounded-lg px-2 py-1.5 text-sm text-cal-text focus:outline-none focus:border-cal-accent"
           />
         </div>
-      </div>
+      )}
 
-      {/* End date for multi-day */}
-      <div>
-        <label className="text-xs text-cal-text-muted block mb-1">End Date (for multi-day events)</label>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          min={dateKey}
-          className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-1.5 text-sm text-cal-text focus:outline-none focus:border-cal-accent"
-        />
-      </div>
-
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Description (optional)"
-        rows={2}
-        className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm text-cal-text placeholder:text-cal-text-dim focus:outline-none focus:border-cal-accent resize-none"
-      />
-
-      <div>
-        <label className="text-xs text-cal-text-muted block mb-1">Category</label>
-        <div className="flex flex-wrap gap-1.5">
+      {/* Category */}
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setCategoryId('')}
+          className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
+            !categoryId
+              ? 'border-cal-accent text-cal-accent'
+              : 'border-cal-border text-cal-text-muted hover:border-cal-border-light'
+          }`}
+        >
+          None
+        </button>
+        {categories.map((cat) => (
           <button
+            key={cat.id}
             type="button"
-            onClick={() => setCategoryId('')}
+            onClick={() => setCategoryId(cat.id)}
             className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
-              !categoryId
-                ? 'border-cal-accent text-cal-accent'
-                : 'border-cal-border text-cal-text-muted hover:border-cal-border-light'
+              categoryId === cat.id
+                ? 'border-current'
+                : 'border-transparent'
             }`}
+            style={{ color: cat.color, backgroundColor: cat.color + '20' }}
           >
-            None
+            {cat.name}
           </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setCategoryId(cat.id)}
-              className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                categoryId === cat.id
-                  ? 'border-current'
-                  : 'border-transparent'
-              }`}
-              style={{ color: cat.color, backgroundColor: cat.color + '20' }}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
 
-      <div>
-        <label className="text-xs text-cal-text-muted block mb-1">Custom Color</label>
-        <ColorPicker value={color} onChange={setColor} />
-      </div>
+      {/* + More toggle for End Date + Description */}
+      {!showMore && !hasMoreFields && (
+        <button
+          type="button"
+          onClick={() => setShowMore(true)}
+          className="text-xs text-cal-text-muted hover:text-cal-text transition-colors"
+        >
+          + More options
+        </button>
+      )}
+
+      {(showMore || hasMoreFields) && (
+        <div className="space-y-2.5">
+          {/* End date */}
+          <div>
+            <label className="text-xs text-cal-text-muted block mb-1">End date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              min={dateKey}
+              className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-1.5 text-sm text-cal-text focus:outline-none focus:border-cal-accent"
+            />
+          </div>
+
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            rows={2}
+            className="w-full bg-cal-bg border border-cal-border rounded-lg px-3 py-2 text-sm text-cal-text placeholder:text-cal-text-dim focus:outline-none focus:border-cal-accent resize-none"
+          />
+        </div>
+      )}
 
       <div className="flex gap-2 pt-1">
         <button

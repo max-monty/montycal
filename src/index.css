@@ -19,14 +19,14 @@ html.light {
   --color-cal-bg: #f8fafc;
   --color-cal-surface: #ffffff;
   --color-cal-surface-hover: #f1f5f9;
-  --color-cal-border: #e2e8f0;
-  --color-cal-border-light: #cbd5e1;
+  --color-cal-border: #cbd5e1;
+  --color-cal-border-light: #94a3b8;
   --color-cal-text: #0f172a;
   --color-cal-text-muted: #64748b;
   --color-cal-text-dim: #94a3b8;
   --color-cal-accent: #2563eb;
   --color-cal-today: #d97706;
-  --color-cal-weekend: rgba(99, 102, 241, 0.06);
+  --color-cal-weekend: rgba(99, 102, 241, 0.09);
 }
 
 @font-face {
