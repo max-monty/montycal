@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5174';
 
 test.describe('Monty Cal - Comprehensive Tests', () => {
 
@@ -11,7 +11,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
       if (msg.type() === 'error') errors.push(msg.text());
     });
 
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     if (errors.length > 0) {
       console.log('JS ERRORS FOUND:', JSON.stringify(errors, null, 2));
@@ -20,7 +20,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('2. App renders with header and grid', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     await expect(page.locator('header')).toBeVisible();
     await expect(page.getByText('Monty Cal')).toBeVisible();
@@ -33,7 +33,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('3. Year navigation works', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
     const currentYear = new Date().getFullYear();
 
     await expect(page.getByText(String(currentYear))).toBeVisible();
@@ -45,7 +45,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('4. Zoom controls work', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     const slider = page.locator('input[type="range"]');
     await expect(slider).toBeVisible();
@@ -54,7 +54,8 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('5. Click cell opens modal', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
+    await expect(page.getByText('JAN')).toBeVisible({ timeout: 10000 });
 
     const cells = page.locator('.cursor-pointer');
     const cellCount = await cells.count();
@@ -65,7 +66,8 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('6. Create event with start and end time', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
+    await expect(page.getByText('JAN')).toBeVisible({ timeout: 10000 });
 
     const cells = page.locator('.cursor-pointer');
     await cells.first().click();
@@ -88,7 +90,8 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('7. Event persists after modal close and reopen', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
+    await expect(page.getByText('JAN')).toBeVisible({ timeout: 10000 });
 
     const cells = page.locator('.cursor-pointer');
     await cells.first().click();
@@ -107,7 +110,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('8. Sidebar opens and shows categories', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     const hamburger = page.locator('header button').first();
     await hamburger.click();
@@ -119,7 +122,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('9. View mode toggle works', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     await page.getByText('Rolling 12').click();
     await page.getByText('Infinite').click();
@@ -130,14 +133,15 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('10. Today button works', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     await page.getByText('Today').click();
     await expect(page.getByText('Monty Cal')).toBeVisible();
   });
 
   test('11. Modal close with escape key', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
+    await expect(page.getByText('JAN')).toBeVisible({ timeout: 10000 });
 
     const cells = page.locator('.cursor-pointer');
     await cells.first().click();
@@ -148,7 +152,8 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('12. Day notes can be added', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
+    await expect(page.getByText('JAN')).toBeVisible({ timeout: 10000 });
 
     const cells = page.locator('.cursor-pointer');
     await cells.first().click();
@@ -164,7 +169,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('13. Default zoom fills the screen reasonably', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
     // Slider at 0 should still show a visible grid
     const slider = page.locator('input[type="range"]');
     const value = await slider.inputValue();
@@ -176,7 +181,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('14. Screenshot - zoomed in', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
     for (let i = 0; i < 5; i++) {
       await page.getByText('+').click();
     }
@@ -185,7 +190,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('15. Screenshot - modal with event form', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
     const cells = page.locator('.cursor-pointer');
     await cells.first().click();
     await page.getByText('+ Add Event').click();
@@ -194,14 +199,14 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('16. Screenshot - sidebar with categories', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
     await page.locator('header button').first().click();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'e2e/screenshots/sidebar-open.png', fullPage: false });
   });
 
   test('17. Theme toggle switches between light and dark', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     // Default is dark mode
     const html = page.locator('html');
@@ -223,7 +228,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
   });
 
   test('18. Sticky month labels stay fixed when scrolling right', async ({ page }) => {
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     // Zoom in so we can scroll horizontally
     for (let i = 0; i < 5; i++) {
@@ -251,7 +256,7 @@ test.describe('Monty Cal - Comprehensive Tests', () => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
 
-    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.goto(BASE, { waitUntil: 'load' });
 
     expect(errors).toHaveLength(0);
     await expect(page.getByText('Monty Cal')).toBeVisible();
