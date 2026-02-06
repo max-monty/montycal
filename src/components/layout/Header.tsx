@@ -45,6 +45,28 @@ function GoogleIcon() {
   );
 }
 
+function friendlyAuthError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  // Extract Firebase error code like "auth/operation-not-allowed"
+  const codeMatch = msg.match(/\(auth\/([\w-]+)\)/);
+  const code = codeMatch?.[1];
+  const map: Record<string, string> = {
+    'operation-not-allowed': 'This sign-in method is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.',
+    'user-not-found': 'No account found with this email.',
+    'wrong-password': 'Incorrect password.',
+    'invalid-credential': 'Invalid email or password.',
+    'email-already-in-use': 'An account with this email already exists. Try signing in instead.',
+    'weak-password': 'Password must be at least 6 characters.',
+    'invalid-email': 'Invalid email address.',
+    'too-many-requests': 'Too many attempts. Please try again later.',
+    'popup-closed-by-user': '',
+    'cancelled-popup-request': '',
+    'network-request-failed': 'Network error. Check your internet connection.',
+  };
+  if (code && code in map) return map[code];
+  return msg;
+}
+
 function AuthDropdown() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuthStore();
   const [open, setOpen] = useState(false);
@@ -75,10 +97,9 @@ function AuthDropdown() {
       await signInWithGoogle();
       setOpen(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (!msg.includes('popup-closed')) {
-        setError(msg.replace(/Firebase: /, '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Google sign-in failed');
-      }
+      console.error('Google sign-in error:', err);
+      const friendly = friendlyAuthError(err);
+      if (friendly) setError(friendly);
     } finally {
       googleBusy.current = false;
     }
@@ -97,8 +118,8 @@ function AuthDropdown() {
       }
       setOpen(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Authentication failed';
-      setError(msg.replace(/Firebase: /, '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Authentication failed');
+      console.error('Email auth error:', err);
+      setError(friendlyAuthError(err) || 'Authentication failed');
     } finally {
       setBusy(false);
     }
