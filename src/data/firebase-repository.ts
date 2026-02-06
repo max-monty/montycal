@@ -11,6 +11,14 @@ import { db, getAuthReady } from './firebase-config';
 import type { DataRepository } from './repository';
 import type { CalendarEvent, DayData, Category } from '../types';
 
+/** Strip undefined values from an object (Firestore rejects them) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function clean(obj: any): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  );
+}
+
 export class FirebaseRepository implements DataRepository {
   private uid: string | null = null;
 
@@ -33,7 +41,7 @@ export class FirebaseRepository implements DataRepository {
 
   async saveEvent(event: CalendarEvent): Promise<void> {
     const base = await this.userPath();
-    await setDoc(doc(db, `${base}/events`, event.id), event);
+    await setDoc(doc(db, `${base}/events`, event.id), clean(event as never));
   }
 
   async deleteEvent(id: string): Promise<void> {
@@ -53,7 +61,7 @@ export class FirebaseRepository implements DataRepository {
 
   async saveDayData(dayData: DayData): Promise<void> {
     const base = await this.userPath();
-    await setDoc(doc(db, `${base}/days`, dayData.dateKey), dayData);
+    await setDoc(doc(db, `${base}/days`, dayData.dateKey), clean(dayData as never));
   }
 
   async deleteDayData(dateKey: string): Promise<void> {
@@ -89,13 +97,13 @@ export class FirebaseRepository implements DataRepository {
 
     if (data.events) {
       for (const [id, event] of Object.entries(data.events)) {
-        batch.set(doc(db, `${base}/events`, id), event as CalendarEvent);
+        batch.set(doc(db, `${base}/events`, id), clean(event as Record<string, unknown>));
       }
     }
 
     if (data.days) {
       for (const [key, day] of Object.entries(data.days)) {
-        batch.set(doc(db, `${base}/days`, key), day as DayData);
+        batch.set(doc(db, `${base}/days`, key), clean(day as Record<string, unknown>));
       }
     }
 
